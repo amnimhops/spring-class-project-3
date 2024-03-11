@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -32,9 +33,31 @@ public class LibraryServiceImpl implements LibraryService {
     private SubjectRepository subjectRepository;
     @Override
     public BookDTO loadBook(Integer id) throws ServiceError {
+
+        if (id == null) {
+            throw new ServiceError(ErrorCode.INVALID_INPUT, "El ID del libro no puede ser nulo.");
+        }
+
+        if (!isNumeric(id.toString())) {
+            throw new ServiceError(ErrorCode.INVALID_INPUT, "El ID del libro debe ser un valor numérico.");
+        }
+
         Optional<Book> opcionalBook = bookRepository.findById(id);
         Book book = opcionalBook.orElseThrow(() -> new ServiceError(ErrorCode.RESOURCE_NOT_FOUND,"Libro no encontrado"));
         return convertBookDto(book);
+    }
+
+    private boolean isNumeric(String str) {
+
+        if (str == null || str.isEmpty()) {
+            return false;
+        }
+        try {
+            Integer.parseInt(str);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     private BookDTO convertBookDto(Book book){
@@ -53,6 +76,15 @@ public class LibraryServiceImpl implements LibraryService {
 
     @Override
     public boolean deleteBook(Integer id) throws ServiceError {
+
+        if (id == null) {
+            throw new ServiceError(ErrorCode.INVALID_INPUT, "El ID del libro no puede ser nulo.");
+        }
+
+        if (!isNumeric(id.toString())) {
+            throw new ServiceError(ErrorCode.INVALID_INPUT, "El ID del libro debe ser un valor numérico.");
+        }
+
         if(!bookRepository.existsById(id)){
             throw new ServiceError(ErrorCode.RESOURCE_NOT_FOUND,"Libro no encontrado");
         }
@@ -62,6 +94,11 @@ public class LibraryServiceImpl implements LibraryService {
 
     @Override
     public BookDTO createBook(CreateBookDTO input) throws ServiceError {
+
+        if (input.getTitle() == null || input.getAuthor() == null || input.getSubjects() == null) {
+            throw new ServiceError(ErrorCode.INVALID_INPUT, "Los parámetros no pueden ser nulos.");
+        }
+
         Author author = getOrCreateAuthor(input.getAuthor());
         List<Subject> subjects = getOrCreateSubjects(input.getSubjects());
 
@@ -82,7 +119,6 @@ public class LibraryServiceImpl implements LibraryService {
             newAuthor.setName(authorName);
             return authorRepository.save(newAuthor);
         });
-
     }
 
     private List<Subject> getOrCreateSubjects(List<String> subjects) {
@@ -103,6 +139,14 @@ public class LibraryServiceImpl implements LibraryService {
 
     @Override
     public List<BookDTO> findBooks(BookSearch search) throws ServiceError {
+
+        if (search == null || search.getTitle() == null && search.getAuthor() == null && search.getSubject() == null) {
+            List<Book> allBooks = bookRepository.findAll();
+            return allBooks.stream()
+                    .map(this::convertBookDto)
+                    .toList();
+        }
+
         List<Book> bookList = bookRepository.findAll();
         List<Book> filterBookList = bookList.stream()
                 .filter(book -> isBookMatchingCriteria(book, search))
@@ -121,6 +165,15 @@ public class LibraryServiceImpl implements LibraryService {
 
     @Override
     public AuthorDTO loadAuthor(Integer id) throws ServiceError {
+
+        /*if (id == null) {
+            throw new ServiceError(ErrorCode.INVALID_INPUT, "El ID del libro no puede ser nulo.");
+        }
+
+        if (!isNumeric(id.toString())) {
+            throw new ServiceError(ErrorCode.INVALID_INPUT, "El ID del autor debe ser un valor numérico.");
+        }*/
+
         Optional<Author> optionalAuthor = authorRepository.findById(id);
         Author author = optionalAuthor.orElseThrow(() -> new ServiceError(ErrorCode.RESOURCE_NOT_FOUND,"Autor no encotrado"));
         return convertToAuthorDTO(author);
